@@ -15,7 +15,7 @@ PrimeFaces.widget.InputText = PrimeFaces.widget.BaseWidget.extend({
         PrimeFaces.skinInput(this.jq);
     }
 });
-w
+
 /**
  * PrimeFaces InputTextarea Widget
  */
@@ -614,9 +614,66 @@ PrimeFaces.widget.SelectOneMenu = PrimeFaces.widget.BaseWidget.extend({
 
             this.filterInput.keyup(function() {
                 _self.filter($(this).val());
+            }).unbind('keydown').keydown(function(e) {
+            	var keyCode = $.ui.keyCode;
+            	switch (e.which) {
+            		case keyCode.DOWN: _self._inputFilterItemDown(); break;
+            		case keyCode.UP: _self._inputFilterItemUp(); break;
+            		case keyCode.ENTER: _self._inputFilterItemEnter(); break;
+                 }
             });
         }
     },
+    
+    _inputFilterItemDown: function() {
+    	
+    	function searchFirstVisible(from, items) {
+    		for (var i = from; i < items.length; ++i) {
+        		var el = $(items[i]);
+        		if (el.is(':visible')) {
+        			return el;
+        		}
+        	}
+    	}
+    	
+    	var items = this.items;
+    	var index = items.index(this.getActiveItem());
+    	var found = searchFirstVisible(index + 1, items);
+    	if (!found) {
+    		found = searchFirstVisible(0, items);
+    		if (!found) {
+    			return;
+    		}
+    	}
+    	this.activateItem(found);
+    },
+    
+    _inputFilterItemUp: function() {
+    	
+    	function searchLastVisible(from, items) {
+    		for (var i = from; i >= 0; --i) {
+        		var el = $(items[i]);
+        		if (el.is(':visible')) {
+        			return el;
+        		}
+        	}
+    	}
+    	
+    	var items = this.items;
+    	var index = items.index(this.getActiveItem());
+    	var found = searchLastVisible(index - 1, items);
+    	if (!found) {
+    		found = searchLastVisible(items.length - 1, items);
+    		if (!found) {
+    			return;
+    		}
+    	}
+    	this.activateItem(found);
+    },
+    
+    _inputFilterItemEnter: function() {
+    	this.hideAndChange();
+    },    
     
     bindConstantEvents: function() {
         var _self = this;
@@ -867,10 +924,21 @@ PrimeFaces.widget.SelectOneMenu = PrimeFaces.widget.BaseWidget.extend({
             this.panel.parent().css('z-index', PrimeFaces.zindex - 1);
         }
 
-        if(this.cfg.effect != 'none')
-            this.panel.show(this.cfg.effect, {}, this.cfg.effectSpeed);
-        else
-            this.panel.show();
+        var _self = this;
+        var showOptions = {
+        	complete: function() {
+            	if (_self.cfg.filter) {
+            		_self.filterInput.focus();
+            	}
+            }
+        };
+
+        if(this.cfg.effect != 'none') {
+            this.panel.show(this.cfg.effect, showOptions, this.cfg.effectSpeed);
+        }
+        else {
+            this.panel.show(showOptions);
+        }
         
         //value before panel is shown
         this.preShowValue = this.options.filter(':selected');
@@ -975,6 +1043,7 @@ PrimeFaces.widget.SelectOneMenu = PrimeFaces.widget.BaseWidget.extend({
     },
     
     filter: function(value) {
+    	this.cfg.initialHeight = this.cfg.initialHeight || this.itemsWrapper.height();
         var filterValue = this.cfg.caseSensitive ? $.trim(value) : $.trim(value).toLowerCase();
 
         if(filterValue === '') {
