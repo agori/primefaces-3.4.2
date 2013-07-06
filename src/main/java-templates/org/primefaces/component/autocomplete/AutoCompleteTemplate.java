@@ -91,7 +91,9 @@ import javax.faces.component.behavior.Behavior;
             if(suggestions == null) {
                 suggestions = new ArrayList();
             }
-
+			
+			String cid = getClientId(facesContext);
+			facesContext.getExternalContext().getRequestMap().put(cid, suggestions);
             facesContext.renderResponse();
 		}
 	}
@@ -108,7 +110,11 @@ import javax.faces.component.behavior.Behavior;
     }
 
     public List getSuggestions() {
-        return this.suggestions;
+		FacesContext facesContext = FacesContext.getCurrentInstance();
+		String cid = getClientId(facesContext);
+		return (List) facesContext.getExternalContext().getRequestMap().get(cid);
+		
+        //return this.suggestions;
     }
 
     private Converter getConverter(FacesContext context) {
